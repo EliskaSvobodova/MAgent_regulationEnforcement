@@ -2,11 +2,97 @@ import argparse
 import time
 import logging as log
 
-from python import magent
-from python.magent.builtin.tf_model import DeepQNetwork
+import numpy as np
+
+import magent
+from magent.builtin.tf_model import DeepQNetwork
+
 
 def play_a_round(env, map_size, handles, models, print_every, train=True, render=False, eps=None):
-    pass
+    env.reset()
+
+    # add 4 compliant and 1 defective agents on random places on the map
+    env.add_agents(handles[0], method="random", n=4)
+    env.add_agents(handles[1], method="random", n=1)
+
+    step_ct = 0
+    done = False
+
+    n = len(handles)
+    obs = [[] for _ in range(n)]
+    ids = [[] for _ in range(n)]
+    acts = [[] for _ in range(n)]
+    nums = [env.get_num(handle) for handle in handles]
+    total_reward = [0 for _ in range(n)]
+
+    print("===== sample =====")
+    print("eps %s number %s" % (eps, nums))
+    start_time = time.time()
+    while not done:
+        # take actions for every model
+        for i in range(n):
+            obs[i] = env.get_observation(handles[i])
+            ids[i] = env.get_agent_id(handles[i])
+            # let models infer action in parallel (non-blocking)
+            models[i].infer_action(obs[i], ids[i], 'e_greedy', eps, block=False)
+        for i in range(n):
+            acts[i] = models[i].fetch_action()  # fetch actions (blocking)
+            env.set_action(handles[i], acts[i])
+
+        # simulate one step
+        done = env.step()
+
+        # sample
+        step_reward = []
+        for i in range(n):
+            rewards = env.get_reward(handles[i])
+            if train:
+                alives = env.get_alive(handles[i])
+                # store samples in replay buffer (non-blocking)
+                models[i].sample_step(rewards, alives, block=False)
+            s = sum(rewards)
+            step_reward.append(s)
+            total_reward[i] += s
+
+        # render
+        if render:
+            env.render()
+
+        # clear dead agents
+        env.clear_dead()
+
+        # check 'done' returned by 'sample' command
+        if train:
+            for model in models:
+                model.check_done()
+
+        if step_ct % print_every == 0:
+            print("step %3d,  reward: %s,  total_reward: %s " %
+                  (step_ct, np.around(step_reward, 2), np.around(total_reward, 2)))
+        step_ct += 1
+        if step_ct > 250:
+            break
+
+    sample_time = time.time() - start_time
+    print("steps: %d,  total time: %.2f,  step average %.2f" % (step_ct, sample_time, sample_time / step_ct))
+
+    # train
+    total_loss, value = [0 for _ in range(n)], [0 for _ in range(n)]
+    if train:
+        print("===== train =====")
+        start_time = time.time()
+
+        # train models in parallel
+        for i in range(n):
+            models[i].train(print_every=2000, block=False)
+        for i in range(n):
+            total_loss[i], value[i] = models[i].fetch_train()
+
+        train_time = time.time() - start_time
+        print("train_time %.2f" % train_time)
+
+    return magent.round(total_loss), magent.round(total_reward), magent.round(value)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -19,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--map_size", type=int, default=1000)
     parser.add_argument("--greedy", action="store_true")
     parser.add_argument("--eval", action="store_true")
-    parser.add_argument("--name", type=str, default="pursuit")
+    parser.add_argument("--name", type=str, default="regulation_enf")
     args = parser.parse_args()
 
     # set logger

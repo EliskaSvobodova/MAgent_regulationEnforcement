@@ -13,10 +13,10 @@ def get_config(map_size):
     )
     defective = cfg.register_agent_type(
         "defective",
-        {'speed': 1, 'view_range': gw.CircleRange(2)}
+        {'speed': 3, 'view_range': gw.CircleRange(2)}
     )
 
-    compliant_group = cfg.add_group(compliant)
-    defective_group = cfg.add_group(defective)
+    cfg.add_group(compliant)
+    cfg.add_group(defective)
 
     return cfg
