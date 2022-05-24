@@ -14,6 +14,7 @@ def play_a_round(env, map_size, handles, models, print_every, train=True, render
     # add 4 compliant and 1 defective agents on random places on the map
     env.add_agents(handles[0], method="random", n=4)
     env.add_agents(handles[1], method="random", n=1)
+    env.add_agents(handles[2], method="random", n=3)
 
     step_ct = 0
     done = False
@@ -115,16 +116,16 @@ if __name__ == "__main__":
     env = magent.GridWorld("regulation_enf", map_size=args.map_size)
     env.set_render_dir("build/render")
 
-    # two groups of agents
+    # groups of agents
     handles = env.get_handles()
 
     # load models
-    names = ["compliant", "defective"]
+    names = ["compliant", "defective", "apple"]
     models = []
     for i in range(len(names)):
         models.append(magent.ProcessingModel(
             env, handles[i], names[i], 20000+i, 4000, DeepQNetwork,
-            batch_size=512, memory_size=2 ** 22,
+            batch_size=512, memory_size=2 ** 20,
             target_update=1000, train_freq=4, use_dueling=True,
             use_double=True
         ))

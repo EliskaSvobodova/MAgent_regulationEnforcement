@@ -9,14 +9,19 @@ def get_config(map_size):
 
     compliant = cfg.register_agent_type(
         "compliant",
-        {'speed': 1, 'view_range': gw.CircleRange(2)}
+        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3)}
     )
     defective = cfg.register_agent_type(
         "defective",
-        {'speed': 3, 'view_range': gw.CircleRange(2)}
+        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3)}
     )
+    apple = cfg.register_agent_type(
+        "apple",
+        {'width': 1, 'length': 1, 'speed': 0, 'view_range': gw.CircleRange(2)}
+    )  # view range cannot be <= 1 -> convolution dimension error
 
-    cfg.add_group(compliant)
-    cfg.add_group(defective)
+    g_c = cfg.add_group(compliant)
+    g_d = cfg.add_group(defective)
+    g_a = cfg.add_group(apple)
 
     return cfg
