@@ -97,13 +97,13 @@ def play_a_round(env, map_size, handles, models, print_every, train=True, render
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--save_every", type=int, default=2)
+    parser.add_argument("--save_every", type=int, default=10)
     parser.add_argument("--render_every", type=int, default=10)
-    parser.add_argument("--n_round", type=int, default=500)
+    parser.add_argument("--n_round", type=int, default=1000)
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--load_from", type=int)
     parser.add_argument("--train", action="store_true")
-    parser.add_argument("--map_size", type=int, default=1000)
+    parser.add_argument("--map_size", type=int, default=10)
     parser.add_argument("--greedy", action="store_true")
     parser.add_argument("--eval", action="store_true")
     parser.add_argument("--name", type=str, default="regulation_enf")
