@@ -11,7 +11,7 @@ from magent.builtin.tf_model import DeepQNetwork
 def play_a_round(env, map_size, handles, models, print_every, train=True, render=False, eps=None):
     env.reset()
 
-    # add 4 compliant and 1 defective agents on random places on the map
+    # add 4 compliant and 1 defective agents and 3 apple trees on random places on the map
     env.add_agents(handles[0], method="random", n=4)
     env.add_agents(handles[1], method="random", n=1)
     env.add_agents(handles[2], method="random", n=3)

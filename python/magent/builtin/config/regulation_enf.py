@@ -17,10 +17,11 @@ def get_config(map_size):
         {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
          'attack_range': gw.CircleRange(1), 'step_reward': -0.01}
     )
+    # The maximum hp is 5 and at each step it recovers 1
     apple = cfg.register_agent_type(
         "apple",
         {'width': 1, 'length': 1, 'speed': 0, 'view_range': gw.CircleRange(2),
-         'kill_reward': 5, 'attack_range': gw.CircleRange(0)}
+         'attack_range': gw.CircleRange(0), 'hp': 5, 'step_recover': 1}
     )  # view range cannot be <= 1 -> convolution dimension error
 
     g_c = cfg.add_group(compliant)
