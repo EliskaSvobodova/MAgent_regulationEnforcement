@@ -246,7 +246,7 @@ if __name__ == "__main__":
         eps = magent.utility.piecewise_decay(k, [0, 200, 400], [1, 0.2, 0.05]) if not args.greedy else 0
 
         loss, reward, value = play_a_round(env, args.map_size, handles, player_handles, food_handle, models,
-                                           print_every=200, train=args.train,
+                                           print_every=50, train=args.train,
                                            render=args.render or (k + 1) % args.render_every == 0,
                                            eps=eps)  # for e-greedy
         log.info("round %d\t loss: %s\t reward: %s\t value: %s" % (k, loss, reward, value))
