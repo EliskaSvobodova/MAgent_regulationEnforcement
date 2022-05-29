@@ -7,7 +7,7 @@ if __name__ == "__main__":
     filename = "../examples/regulation_enf.log"
     plot_filename = "../regulation_enf.png"
     log_values = ["loss", "reward", "value"]
-    agent_types = ["compliant", "defective", "apple"]
+    agent_types = ["compliant", "defective"]
 
     data = []
 

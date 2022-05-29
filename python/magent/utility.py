@@ -186,7 +186,7 @@ def init_logger(filename):
     filename : str
         filename of the log
     """
-    logging.basicConfig(level=logging.INFO, filename=filename + ".log")
+    logging.basicConfig(level=logging.INFO, filename=filename + ".log", filemode='w')
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
