@@ -28,7 +28,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
     env.reset()
 
     # add 4 compliant and 1 defective agents and 3 apple trees on random places on the map
-    env.add_agents(handles[0], method="random", n=3)
+    env.add_agents(handles[0], method="random", n=num_trees)
     env.add_agents(handles[1], method="random", n=4)
     env.add_agents(handles[2], method="random", n=1)
 
@@ -64,8 +64,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
     y_train = []
     while not done:
         nums = [env.get_num(handle) for handle in player_handles]
-        if nums != [4, 1]:
-            break
+        assert(nums == [4, 1])
         # get observation
         for i in range(n):
             obs[i] = env.get_observation(player_handles[i])
@@ -86,7 +85,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
 
 
             food_positions = env.get_pos(food_handle).tolist()
-            assert len(food_positions) == 3
+            assert len(food_positions) == num_trees
             for food_pos in food_positions:
                 for j in range(len(ids[i])):
                     obs[i][1][j, cnt] = food_pos[0]
@@ -135,7 +134,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
         for i in range(n):
             if train:
                 # store samples in replay buffer (non-blocking)
-                models[i].sample_step(rewards, alives, block=False)
+                models[i].sample_step(rewards[i], alives[i], block=False)
             s = sum(rewards)
             step_reward.append(s)
             total_reward[i] += s
@@ -154,7 +153,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
 
         # respawn
         food_num = env.get_num(food_handle)
-        env.add_agents(food_handle, method="random", n=5-food_num)
+        env.add_agents(food_handle, method="random", n=num_trees-food_num)
 
         if step_ct % print_every == 0:
             print("step %3d,  reward: %s,  total_reward: %s " %
@@ -200,6 +199,7 @@ if __name__ == "__main__":
 
     diminishing = True
     boycot_ratio = 1
+    num_trees = 3
 
     # set logger
     magent.utility.init_logger(args.name)
@@ -236,8 +236,8 @@ if __name__ == "__main__":
 
     # print debug info
     print(args)
-    print("view_space", env.get_view_space(handles[0]))
-    print("feature_space", env.get_feature_space(handles[0]))
+    print("view_space", env.get_view_space(handles[1]))
+    print("feature_space", env.get_feature_space(handles[1]))
 
     # play
     start = time.time()
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         eps = magent.utility.piecewise_decay(k, [0, 200, 400], [1, 0.2, 0.05]) if not args.greedy else 0
 
         loss, reward, value = play_a_round(env, args.map_size, handles, player_handles, food_handle, models,
-                                           print_every=50, train=args.train,
+                                           print_every=200, train=args.train,
                                            render=args.render or (k + 1) % args.render_every == 0,
                                            eps=eps)  # for e-greedy
         log.info("round %d\t loss: %s\t reward: %s\t value: %s" % (k, loss, reward, value))
