@@ -3,52 +3,137 @@ import time
 import logging as log
 
 import numpy as np
-
+import collections
 import magent
 from magent.builtin.tf_model import DeepQNetwork
 
 
-def play_a_round(env, map_size, handles, models, print_every, train=True, render=False, eps=None):
+def defective_detector(history, ids, old_rewards_checked):
+    compliant_agents = []
+    defective_agents = []
+    defective = False
+    for group in [0,1]:
+        for idx, id in enumerate(ids[group]):
+            for previous_reward in history[idx][-old_rewards_checked:]:
+                if previous_reward > 3:
+                    defective_agents.append(idx)
+                    defective = True
+                    break
+            if not defective:
+                compliant_agents.append(idx)
+    return compliant_agents, defective_agents
+
+
+
+def play_a_round(env, map_size, handles, player_handles, food_handles, models, print_every, train=True, render=False, eps=None):
     env.reset()
 
     # add 4 compliant and 1 defective agents and 3 apple trees on random places on the map
-    env.add_agents(handles[0], method="random", n=4)
-    env.add_agents(handles[1], method="random", n=1)
-    env.add_agents(handles[2], method="random", n=3)
+    env.add_agents(handles[0], method="random", n=3)
+    env.add_agents(handles[1], method="random", n=4)
+    env.add_agents(handles[2], method="random", n=1)
 
     step_ct = 0
     done = False
 
-    n = len(handles)
+    n = len(player_handles)
+    history = collections.defaultdict(list)
+    total_rewards = [0 for _ in range(n)]
+    rewards = [None for _ in range(n)]
+    alives = [None for _ in range(n)]
+    prev_pos = [None for _ in range(n)]
+    cur_pos  = [None for _ in range(n)]
     obs = [[] for _ in range(n)]
     ids = [[] for _ in range(n)]
     acts = [[] for _ in range(n)]
-    nums = [env.get_num(handle) for handle in handles]
+    nums = [env.get_num(handle) for handle in player_handles]
     total_reward = [0 for _ in range(n)]
 
     print("===== sample =====")
     print("eps %s number %s" % (eps, nums))
     start_time = time.time()
+
+    #####
+    # diminishing reward shaping config
+    #####
+    old_rewards_checked = 5
+    thresh = 2
+    ng = -3
+
+    X_train = []
+    y_train = []
     while not done:
-        # take actions for every model
+        nums = [env.get_num(handle) for handle in player_handles]
+        if nums != [4, 1]:
+            break
+        # get observation
         for i in range(n):
-            obs[i] = env.get_observation(handles[i])
-            ids[i] = env.get_agent_id(handles[i])
-            # let models infer action in parallel (non-blocking)
-            models[i].infer_action(obs[i], ids[i], 'e_greedy', eps, block=False)
-        for i in range(n):
-            acts[i] = models[i].fetch_action()  # fetch actions (blocking)
-            env.set_action(handles[i], acts[i])
+            obs[i] = env.get_observation(player_handles[i])
+            ids[i] = env.get_agent_id(player_handles[i])
+            prev_pos[i] = env.get_pos(player_handles[i])
+
+        for i in [1, 0]:
+            ##########
+            # add custom feature
+            ########
+            # give 2D ID embedding
+            cnt = 2
+
+            if diminishing:
+                for j in range(len(ids[i])):
+                    obs[i][1][j, cnt] = sum(history[ids[i][j]][-old_rewards_checked+1:])
+            cnt += 1
+
+
+            food_positions = env.get_pos(food_handle).tolist()
+            assert len(food_positions) == 3
+            for food_pos in food_positions:
+                for j in range(len(ids[i])):
+                    obs[i][1][j, cnt] = food_pos[0]
+                    obs[i][1][j, cnt+1] = food_pos[1]
+
+                cnt += 2
+
+            # add feature, add coordinate between agents
+            for k in range(n):
+                for l in range(len(ids[k])):
+                    obs[i][1][:, cnt] = prev_pos[k][l][0]
+                    obs[i][1][:, cnt+1] = prev_pos[k][l][1]
+                    cnt += 2
+
+            assert cnt == 23
+
+            acts[i] = models[i].infer_action(obs[i], ids[i], policy='e_greedy', eps=eps, block=True)
+            env.set_action(player_handles[i], acts[i])
 
         # simulate one step
         done = env.step()
 
+        for i in range(n):
+            rewards[i] = env.get_reward(player_handles[i])
+            alives[i] = env.get_alive(player_handles[i])
+            cur_pos[i] = env.get_pos(player_handles[i])
+            total_rewards[i] += (np.array(rewards[i])).sum()
+
+        if diminishing:
+            for i in [0, 1]:
+                compliant_agents, defective_agents = defective_detector(history, ids, old_rewards_checked)
+                s = 0
+                for defective_id in defective_agents:
+                    s += reward[i][defective_id]
+                for j in range(len(ids[i])):
+                    idx = ids[i][j]
+                    ori_reward = rewards[i][idx]    # True reward of the agent, the rewards list contains the perceived reward
+                    history[idx].append(int(ori_reward))
+
+                    if i == 0:  # We only apply the boycot function in compliant agents
+                        new_reward = ori_reward - boycot_ratio * (s/len(defective_agents))
+                        rewards[i][idx] = new_reward
+
         # sample
         step_reward = []
         for i in range(n):
-            rewards = env.get_reward(handles[i])
             if train:
-                alives = env.get_alive(handles[i])
                 # store samples in replay buffer (non-blocking)
                 models[i].sample_step(rewards, alives, block=False)
             s = sum(rewards)
@@ -66,6 +151,10 @@ def play_a_round(env, map_size, handles, models, print_every, train=True, render
         if train:
             for model in models:
                 model.check_done()
+
+        # respawn
+        food_num = env.get_num(food_handle)
+        env.add_agents(food_handle, method="random", n=5-food_num)
 
         if step_ct % print_every == 0:
             print("step %3d,  reward: %s,  total_reward: %s " %
@@ -109,6 +198,9 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, default="regulation_enf")
     args = parser.parse_args()
 
+    diminishing = True
+    boycot_ratio = 1
+
     # set logger
     magent.utility.init_logger(args.name)
 
@@ -118,9 +210,11 @@ if __name__ == "__main__":
 
     # groups of agents
     handles = env.get_handles()
+    food_handle = handles[0]
+    player_handles = handles[1:]
 
     # load models
-    names = ["compliant", "defective", "apple"]
+    names = ["apple", "compliant", "defective"]
     models = []
     for i in range(len(names)):
         models.append(magent.ProcessingModel(
@@ -151,7 +245,7 @@ if __name__ == "__main__":
         tic = time.time()
         eps = magent.utility.piecewise_decay(k, [0, 200, 400], [1, 0.2, 0.05]) if not args.greedy else 0
 
-        loss, reward, value = play_a_round(env, args.map_size, handles, models,
+        loss, reward, value = play_a_round(env, args.map_size, handles, player_handles, food_handle, models,
                                            print_every=50, train=args.train,
                                            render=args.render or (k + 1) % args.render_every == 0,
                                            eps=eps)  # for e-greedy
