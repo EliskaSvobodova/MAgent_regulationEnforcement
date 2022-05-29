@@ -6,16 +6,24 @@ def get_config(map_size):
     cfg = gw.Config()
 
     cfg.set({"map_width": map_size, "map_height": map_size})
+    cfg.set({"embedding_size": 19})  # custom feature:
+    # 2 [original fields],
+    # 1 [sum of last few rewards of the group],
+    # 3*2 [food positions],
+    # 5*2 [last positions of all agents]
+    cfg.set({"minimap_mode": True})
 
     compliant = cfg.register_agent_type(
         "compliant",
-        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3), 'damage': 3,
-         'attack_range': gw.CircleRange(1), 'step_reward': -0.01, 'hp': 1000}
+        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
+         'attack_range': gw.CircleRange(1), 'step_reward': -0.01, 'hp': 1000,
+         'damage': 3}
     )
     defective = cfg.register_agent_type(
         "defective",
-        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3), 'damage': 5,
-         'attack_range': gw.CircleRange(1), 'step_reward': -0.01, 'hp': 1000}
+        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
+         'attack_range': gw.CircleRange(1), 'step_reward': -0.01, 'hp': 1000,
+         'damage': 5}
     )
     # The maximum hp is 5 and at each step it recovers 1
     apple = cfg.register_agent_type(

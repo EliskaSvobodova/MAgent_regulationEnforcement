@@ -24,7 +24,6 @@ def defective_detector(history, ids, old_rewards_checked):
     return compliant_agents, defective_agents
 
 
-
 def play_a_round(env, map_size, handles, player_handles, food_handles, models, print_every, train=True, render=False, eps=None):
     env.reset()
 
@@ -37,6 +36,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
     done = False
 
     n = len(player_handles)
+
     history = collections.defaultdict(list)
     total_rewards = [0 for _ in range(n)]
     rewards = [None for _ in range(n)]
@@ -101,7 +101,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
                     obs[i][1][:, cnt+1] = prev_pos[k][l][1]
                     cnt += 2
 
-            assert cnt == 23
+            assert cnt == 19
 
             acts[i] = models[i].infer_action(obs[i], ids[i], policy='e_greedy', eps=eps, block=True)
             env.set_action(player_handles[i], acts[i])
@@ -123,10 +123,10 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
                     s += reward[i][defective_id]
                 for j in range(len(ids[i])):
                     idx = ids[i][j]
-                    ori_reward = rewards[i][idx]    # True reward of the agent, the rewards list contains the perceived reward
+                    ori_reward = rewards[i][j]    # True reward of the agent, the rewards list contains the perceived reward
                     history[idx].append(int(ori_reward))
 
-                    if i == 0:  # We only apply the boycot function in compliant agents
+                    if i == 0 and len(defective_agents) > 0:  # We only apply the boycot function in compliant agents
                         new_reward = ori_reward - boycot_ratio * (s/len(defective_agents))
                         rewards[i][idx] = new_reward
 
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     # load models
     names = ["apple", "compliant", "defective"]
     models = []
-    for i in range(len(names)):
+    for i in range(1, len(names)):
         models.append(magent.ProcessingModel(
             env, handles[i], names[i], 20000+i, 4000, DeepQNetwork,
             batch_size=512, memory_size=2 ** 20,
