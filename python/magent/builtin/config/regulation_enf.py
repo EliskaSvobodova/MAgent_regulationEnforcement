@@ -10,21 +10,21 @@ def get_config(map_size):
     apple = cfg.register_agent_type(
         "apple",
         {'width': 1, 'length': 1, 'speed': 0, 'view_range': gw.CircleRange(2),
-         'kill_reward': 1, 'hp': 5, 'attack_range': gw.CircleRange(0), 'step_recover': 1}
+         'kill_reward': 0, 'hp': 5, 'attack_range': gw.CircleRange(0), 'step_recover': 1}
     )  # view range cannot be <= 1 -> convolution dimension error
 
     compliant = cfg.register_agent_type(
         "compliant",
         {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
          'attack_range': gw.CircleRange(1), 'step_reward': -0.01,
-         'hp': 30, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
+         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
          'damage': 3}
     )
     defective = cfg.register_agent_type(
         "defective",
         {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
          'attack_range': gw.CircleRange(1), 'step_reward': -0.01,
-         'hp': 30, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
+         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
          'damage': 5}
     )
 
@@ -37,8 +37,8 @@ def get_config(map_size):
     a = gw.AgentSymbol(g_a, index='any')
 
     # reward for collecting apples
-    cfg.add_reward_rule(gw.Event(c, 'attack', a), receiver=c, value=1)
-    cfg.add_reward_rule(gw.Event(d, 'attack', a), receiver=d, value=1)
+    cfg.add_reward_rule(gw.Event(c, 'attack', a), receiver=c, value=3)
+    cfg.add_reward_rule(gw.Event(d, 'attack', a), receiver=d, value=5)
 
     # negative reward for attacking another agent
     cfg.add_reward_rule(gw.Event(c, 'attack', d), receiver=c, value=-1)

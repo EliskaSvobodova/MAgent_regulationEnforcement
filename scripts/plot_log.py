@@ -30,10 +30,13 @@ if __name__ == "__main__":
 
     fig, axs = plt.subplots(len(log_values), 1)
     for idx, title in enumerate(log_values):
+        means = []
         for agent_idx, agent_type in enumerate(agent_types):
-            axs[idx].plot(data[:, idx * len(agent_types) + agent_idx], alpha=0.6, label=agent_type)
+            d = data[:, idx * len(agent_types) + agent_idx]
+            means.append(sum(d[-10:]) / 10)
+            axs[idx].plot(d, alpha=0.6, label=agent_type)
         axs[idx].legend()
-        axs[idx].set_title(title)
+        axs[idx].set_title(f"{title} - {', '.join([f'{a}: {m: .2f}' for a, m in zip(agent_types, means)])}")
 
     fig.tight_layout()
     plt.savefig(plot_filename)

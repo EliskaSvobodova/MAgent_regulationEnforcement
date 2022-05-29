@@ -69,7 +69,7 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
 
         # compliant
         i = 0
-        boycotting_ratio = 0.5
+        boycotting_ratio = 0
         reg_max = 3  # maximum number of apples to be collected
         rewards = env.get_reward(player_handles[i])
         def_reward = 0
@@ -80,7 +80,7 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
                 def_num += 1
                 def_reward += sum(reward_history[def_idx])
         if def_num > 0:  # boycotting reward shaping: penalize agent for success of the defective agents
-            rewards = [r - boycotting_ratio * (def_reward / def_num) for r in rewards]
+            rewards = np.array([r - boycotting_ratio * (def_reward / def_num) for r in rewards])
         for j, agent_idx in enumerate(ids[i]):
             reward_history[agent_idx].append(rewards[j])
         if train:
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_every", type=int, default=100)
     parser.add_argument("--render_every", type=int, default=100)
-    parser.add_argument("--n_round", type=int, default=2000)
+    parser.add_argument("--n_round", type=int, default=500)
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--load_from", type=int)
     parser.add_argument("--train", action="store_true")
