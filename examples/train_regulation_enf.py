@@ -127,7 +127,7 @@ def play_a_round(env, map_size, handles, player_handles, food_handles, models, p
 
                     if i == 0 and len(defective_agents) > 0:  # We only apply the boycot function in compliant agents
                         new_reward = ori_reward - boycot_ratio * (s/len(defective_agents))
-                        rewards[i][idx] = new_reward
+                        rewards[i][j] = new_reward
 
         # sample
         step_reward = []
