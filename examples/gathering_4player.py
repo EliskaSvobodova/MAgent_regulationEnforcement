@@ -373,7 +373,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # set logger
-    log.basicConfig(level=log.INFO, 'logs/' + filename=args.name + '.log')
+    log.basicConfig(level=log.INFO, filename='logs/' + args.name + '.log')
     console = log.StreamHandler()
     console.setLevel(log.INFO)
     log.getLogger('').addHandler(console)
