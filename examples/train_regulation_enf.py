@@ -30,6 +30,7 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
     obs = [[] for _ in range(n)]
     ids = [[] for _ in range(n)]
     acts = [[] for _ in range(n)]
+    prev_pos = [None for _ in range(n)]
     nums = [env.get_num(handle) for handle in player_handles]
     total_reward = [0 for _ in range(n)]
     cur_pos = [None for _ in range(n)]
@@ -38,15 +39,35 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
     print("eps %s number %s" % (eps, nums))
     start_time = time.time()
     while not done:
-        # take actions for every model
+        # get observation
         for i in range(n):
             obs[i] = env.get_observation(player_handles[i])
             ids[i] = env.get_agent_id(player_handles[i])
-            cur_pos[i] = env.get_pos(player_handles[i])
-            # let models infer action in parallel (non-blocking)
+            prev_pos[i] = env.get_pos(player_handles[i])
+
+        for i in [1, 0]:
+            # custom features
+            feat_idx = 2  # leave first 2 elements intact (= embedding of agent's ID)
+            for j in range(len(ids[i])):  # info about last rewards
+                obs[i][1][j, feat_idx] = sum(reward_history[ids[i][j]])
+            feat_idx += 1
+            food_positions = env.get_pos(food_handle).tolist()
+            assert len(food_positions) == 3
+            for food_pos in food_positions:
+                for j in range(len(ids[i])):
+                    obs[i][1][j, feat_idx] = food_pos[0]  # info about where is the food
+                    obs[i][1][j, feat_idx + 1] = food_pos[1]
+                feat_idx += 2
+            for k in range(n):
+                for l in range(len(ids[k])):
+                    obs[i][1][:, feat_idx] = prev_pos[k][l][0]
+                    obs[i][1][:, feat_idx + 1] = prev_pos[k][l][1]
+                    feat_idx += 2
+            assert feat_idx == 19
+
+            # get actions from models
             models[i].infer_action(obs[i], ids[i], 'e_greedy', eps, block=False)
-        for i in range(n):
-            acts[i] = models[i].fetch_action()  # fetch actions (blocking)
+            acts[i] = models[i].fetch_action()
             env.set_action(player_handles[i], acts[i])
 
         # simulate one step
@@ -69,7 +90,7 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
 
         # compliant
         i = 0
-        boycotting_ratio = 0
+        boycotting_ratio = 0.5
         reg_max = 3  # maximum number of apples to be collected
         rewards = env.get_reward(player_handles[i])
         def_reward = 0
@@ -99,15 +120,22 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
         env.clear_dead()
 
         # respawn
-        food_num = env.get_num(food_handle)
-        for _ in range(5 - food_num):
+        def position():
+            for i in range(n):
+                cur_pos[i] = env.get_pos(player_handles[i])
             occupied_pos = cur_pos[0].tolist() + cur_pos[1].tolist() + env.get_pos(food_handle).tolist()
-
             pos = [random.randint(1, map_size - 2), random.randint(1, map_size - 2)]
             while pos in occupied_pos:
                 pos = [random.randint(1, map_size - 2), random.randint(1, map_size - 2)]
+            return pos
 
-            env.add_agents(food_handle, method="custom", pos=[pos])
+        food_num = env.get_num(food_handle)
+        for _ in range(3 - food_num):
+            env.add_agents(food_handle, method="custom", pos=[position()])
+        for i in range(4 - len(env.get_agent_id(player_handles[0]))):
+            env.add_agents(player_handles[0], method="custom", pos=[position()])
+        for i in range(1 - len(env.get_agent_id(player_handles[1]))):
+            env.add_agents(player_handles[1], method="custom", pos=[position()])
 
         # check 'done' returned by 'sample' command
         if train:
@@ -144,9 +172,9 @@ def play_a_round(env, map_size, food_handle, player_handles, models, print_every
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--save_every", type=int, default=100)
-    parser.add_argument("--render_every", type=int, default=100)
-    parser.add_argument("--n_round", type=int, default=500)
+    parser.add_argument("--save_every", type=int, default=500)
+    parser.add_argument("--render_every", type=int, default=500)
+    parser.add_argument("--n_round", type=int, default=2000)
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--load_from", type=int)
     parser.add_argument("--train", action="store_true")

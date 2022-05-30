@@ -33,8 +33,12 @@ if __name__ == "__main__":
         means = []
         for agent_idx, agent_type in enumerate(agent_types):
             d = data[:, idx * len(agent_types) + agent_idx]
+            window_d = []
+            window_size = 10
+            for i in range(window_size, len(d)):
+                window_d.append(sum(d[i: i+window_size]) / window_size)
             means.append(sum(d[-10:]) / 10)
-            axs[idx].plot(d, alpha=0.6, label=agent_type)
+            axs[idx].plot(window_d, alpha=0.6, label=agent_type)
         axs[idx].legend()
         axs[idx].set_title(f"{title} - {', '.join([f'{a}: {m: .2f}' for a, m in zip(agent_types, means)])}")
 

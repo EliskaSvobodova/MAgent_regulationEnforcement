@@ -6,25 +6,27 @@ def get_config(map_size):
     cfg = gw.Config()
 
     cfg.set({"map_width": map_size, "map_height": map_size})
+    cfg.set({"embedding_size": 19})
+    cfg.set({"minimap_mode": True})
 
     apple = cfg.register_agent_type(
         "apple",
         {'width': 1, 'length': 1, 'speed': 0, 'view_range': gw.CircleRange(2),
-         'kill_reward': 0, 'hp': 5, 'attack_range': gw.CircleRange(0), 'step_recover': 1}
+         'kill_reward': 10, 'hp': 5, 'attack_range': gw.CircleRange(0), 'step_recover': 1}
     )  # view range cannot be <= 1 -> convolution dimension error
 
     compliant = cfg.register_agent_type(
         "compliant",
         {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
          'attack_range': gw.CircleRange(1), 'step_reward': -0.01,
-         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
+         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.1,
          'damage': 3}
     )
     defective = cfg.register_agent_type(
         "defective",
-        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(3),
+        {'width': 1, 'length': 1, 'speed': 1, 'view_range': gw.CircleRange(5),
          'attack_range': gw.CircleRange(1), 'step_reward': -0.01,
-         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.05,
+         'hp': 300, 'step_recover': 0, 'dead_penalty': -1, 'attack_penalty': -0.1,
          'damage': 5}
     )
 
@@ -37,7 +39,7 @@ def get_config(map_size):
     a = gw.AgentSymbol(g_a, index='any')
 
     # reward for collecting apples
-    cfg.add_reward_rule(gw.Event(c, 'attack', a), receiver=c, value=3)
+    cfg.add_reward_rule(gw.Event(c, 'attack', a), receiver=c, value=1)
     cfg.add_reward_rule(gw.Event(d, 'attack', a), receiver=d, value=5)
 
     # negative reward for attacking another agent
