@@ -27,7 +27,6 @@ if __name__ == "__main__":
                 data.append(row)
     # data.col = loss[n_agent_types], reward[n_agent_types], value[n_agent_types]
     data = np.array(data)
-    print(data)
 
     plt.figure()
     means = []
